@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>パーセントバルーン</title>
+
+  <style>
+    :root {
+      --pink: #f06f9d;
+      --blue: #5a9dfc;
+      --text: #232a38;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+      color: var(--text);
+      min-height: 100dvh;
+      background: url("bg.png") center / cover no-repeat fixed;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.5);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 430px;
+      margin: 0 auto;
+      padding: 34px 18px 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .title {
+      margin: 8px 0 6px;
+      text-align: center;
+      font-size: clamp(1.75rem, 7vw, 2.7rem);
+      font-weight: 900;
+      letter-spacing: -0.06em;
+      line-height: 1.05;
+      color: #252c3b;
+      white-space: nowrap;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #555d6d;
+      margin-bottom: 16px;
+    }
+
+    .top-status {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow: 0 8px 24px rgba(30, 32, 40, 0.08);
+      margin-bottom: 16px;
+      backdrop-filter: blur(8px);
+    }
+
+    .top-item {
+      flex: 1;
+      border-radius: 18px;
+      padding: 12px 10px;
+      text-align: center;
+      font-weight: 900;
+    }
+
+    .hp-item {
+      background: rgba(255, 235, 242, 0.92);
+      color: #d95f8d;
+    }
+
+    .damage-item {
+      background: rgba(230, 240, 255, 0.96);
+      color: #4d8fe8;
+    }
+
+    .top-label {
+      display: block;
+      font-size: 0.82rem;
+      margin-bottom: 5px;
+    }
+
+    .top-value {
+      display: block;
+      font-size: 1.65rem;
+      line-height: 1;
+    }
+
+    .status {
+      text-align: center;
+      padding: 14px;
+      border-radius: 999px;
+      border: 3px solid var(--pink);
+      color: #d95f8d;
+      font-weight: 900;
+      background: rgba(255, 255, 255, 0.78);
+      margin-bottom: 16px;
+      backdrop-filter: blur(8px);
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.82);
+      border-radius: 28px;
+      padding: 22px 18px;
+      box-shadow: 0 8px 24px rgba(30, 32, 40, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    label {
+      display: block;
+      font-weight: 900;
+      font-size: 1.25rem;
+      margin-bottom: 12px;
+    }
+
+    input {
+      width: 100%;
+      height: 72px;
+      border-radius: 22px;
+      border: 2px solid #e5dce3;
+      padding: 0 18px;
+      font-size: 1.15rem;
+      margin-bottom: 20px;
+      outline: none;
+      background: white;
+    }
+
+    input:focus {
+      border-color: var(--pink);
+    }
+
+    input:disabled {
+      background: #f1f1f1;
+      color: #777;
+    }
+
+    button {
+      width: 100%;
+      height: 78px;
+      border-radius: 24px;
+      border: none;
+      background: linear-gradient(135deg, #f45f97, #ef6d91);
+      color: white;
+      font-size: 1.35rem;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(239, 110, 145, 0.22);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .player-name-display {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #8b92a3;
+    }
+
+    #message {
+      min-height: 1.3em;
+      text-align: center;
+      margin-top: 8px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #5d6472;
+    }
+
+    @media (max-height: 740px) {
+      .container { padding-top: 24px; }
+
+      .title {
+        font-size: clamp(1.6rem, 6.5vw, 2.35rem);
+      }
+
+      input { height: 64px; }
+      button { height: 70px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 class="title">パーセントバルーン</h1>
+    <div class="subtitle">みんなで予想して生き残れ！</div>
+
+    <div class="top-status">
+      <div class="top-item hp-item">
+        <span class="top-label">残りHP</span>
+        <span class="top-value" id="hp">--</span>
+      </div>
+
+      <div class="top-item damage-item">
+        <span class="top-label">前回ダメージ</span>
+        <span class="top-value" id="damage">--</span>
+      </div>
+    </div>
+
+    <div class="status" id="status">読み込み中...</div>
+
+    <div class="card">
+      <label for="answer">回答（0〜100）</label>
+      <input id="answer" type="number" min="0" max="100" placeholder="数字を入力">
+
+      <button id="submitButton">送信</button>
+
+      <div id="playerNameDisplay" class="player-name-display">-- さん</div>
+      <div id="message"></div>
+    </div>
+  </div>
+
+  <script>
+    const answerInput = document.getElementById("answer");
+    const submitButton = document.getElementById("submitButton");
+    const message = document.getElementById("message");
+    const status = document.getElementById("status");
+    const hp = document.getElementById("hp");
+    const damage = document.getElementById("damage");
+    const playerNameDisplay = document.getElementById("playerNameDisplay");
+
+    const name = localStorage.getItem("playerName");
+
+    if (!name) {
+      location.href = "/register.html";
+    } else {
+      playerNameDisplay.textContent = name + " さん";
+    }
+
+    submitButton.addEventListener("click", async () => {
+      const answer = Number(answerInput.value);
+
+      if (answerInput.value === "" || isNaN(answer) || answer < 0 || answer > 100) {
+        message.textContent = "0〜100で入力してね";
+        return;
+      }
+
+      const res = await fetch("/submit-answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name, answer })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        message.textContent = "送信OK（あなたの回答：" + answer + "）";
+        answerInput.disabled = true;
+        submitButton.disabled = true;
+      } else {
+        message.textContent = data.message || "送信できませんでした";
+      }
+
+      loadMyData();
+    });
+
+    async function loadMyData() {
+      if (!name) return;
+
+      const res = await fetch(`/get-player/${encodeURIComponent(name)}`);
+      const data = await res.json();
+
+      if (!data.success) return;
+
+      hp.textContent = data.player.hp;
+      damage.textContent = data.player.damage === 0 ? "--" : "-" + data.player.damage;
+
+      // この問題に回答済みなら、回答欄と送信ボタンをロック
+      if (data.player.answered) {
+        answerInput.disabled = true;
+        submitButton.disabled = true;
+
+        if (data.player.answer !== 0) {
+          answerInput.value = data.player.answer;
+          message.textContent = "回答済み（あなたの回答：" + data.player.answer + "）";
+        }
+      } else {
+        // 次の問題に進んだら、また入力できるようにする
+        answerInput.disabled = false;
+        submitButton.disabled = false;
+        answerInput.value = "";
+        message.textContent = "";
+      }
+    }
+
+    async function loadStatus() {
+      const res = await fetch("/answer-status");
+      const data = await res.json();
+
+      status.textContent = data.isAcceptingAnswers ? "回答受付中" : "締切中";
+
+      // 締切中なら送信不可
+      if (!data.isAcceptingAnswers) {
+        submitButton.disabled = true;
+      } else {
+        loadMyData();
+      }
+    }
+
+    loadStatus();
+    loadMyData();
+
+    setInterval(() => {
+      loadStatus();
+      loadMyData();
+    }, 3000);
+  </script>
+</body>
+</html>

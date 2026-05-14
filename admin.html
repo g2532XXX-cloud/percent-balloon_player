@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>管理画面</title>
+</head>
+<body>
+
+<h1>管理画面</h1>
+
+<button id="open">受付開始</button>
+<button id="close">締切</button>
+<button id="next">次の問題</button>
+<button id="reset">全データリセット</button>
+
+<br><br>
+
+<input id="correct" type="number" placeholder="正解">
+<button id="calc">計算</button>
+
+<h2>ランキング</h2>
+<table border="1">
+<thead>
+<tr>
+<th>順位</th>
+<th>名前</th>
+<th>HP</th>
+<th>回答</th>
+<th>前回ダメージ</th>
+<th>回答済み</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+
+<script>
+const list = document.getElementById("list");
+
+async function load() {
+  const res = await fetch("/get-players");
+  const data = await res.json();
+
+  const arr = Object.keys(data).map(name => ({
+    name,
+    ...data[name]
+  }));
+
+  arr.sort((a, b) => b.hp - a.hp);
+
+  list.innerHTML = "";
+
+  arr.forEach((p, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${p.name}</td>
+      <td>${p.hp}</td>
+      <td>${p.answer}</td>
+      <td>${p.damage}</td>
+      <td>${p.answered ? "済" : "未"}</td>
+    `;
+    list.appendChild(tr);
+  });
+}
+
+document.getElementById("calc").onclick = async () => {
+  const correct = Number(document.getElementById("correct").value);
+
+  await fetch("/calculate", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ correct })
+  });
+
+  load();
+};
+
+document.getElementById("next").onclick = async () => {
+  await fetch("/next-round", { method: "POST" });
+  load();
+};
+
+document.getElementById("open").onclick = async () => {
+  await fetch("/open-answers", { method: "POST" });
+};
+
+document.getElementById("close").onclick = async () => {
+  await fetch("/close-answers", { method: "POST" });
+};
+
+document.getElementById("reset").onclick = async () => {
+  const ok = confirm("本当に全データを削除しますか？この操作は元に戻せません。");
+
+  if (!ok) return;
+
+  await fetch("/reset", {
+    method: "POST"
+  });
+
+  alert("全データを削除しました");
+  load();
+};
+
+setInterval(load, 3000);
+load();
+</script>
+
+</body>
+</html>
