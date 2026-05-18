@@ -19,7 +19,7 @@
       font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
       color: var(--text);
       min-height: 100dvh;
-      background: url("bg.png") center / cover no-repeat fixed;
+      background: url("/bg.png") center / cover no-repeat fixed;
       position: relative;
     }
 
@@ -184,6 +184,94 @@
       color: #5d6472;
     }
 
+    .perfect-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 99;
+      pointer-events: none;
+    }
+
+    .perfect-overlay.show {
+      display: flex;
+      animation: fadeOut 1.6s ease forwards;
+    }
+
+    .perfect-box {
+      background: rgba(255, 255, 255, 0.92);
+      border: 3px solid #f06f9d;
+      border-radius: 28px;
+      padding: 28px 34px;
+      text-align: center;
+      box-shadow: 0 12px 30px rgba(30, 32, 40, 0.16);
+      animation: pop 0.55s ease;
+    }
+
+    .perfect-title {
+      font-size: 1.7rem;
+      font-weight: 900;
+      color: #f06f9d;
+      margin-bottom: 8px;
+    }
+
+    .perfect-sub {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #5d6472;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 16px;
+      border-radius: 3px;
+      opacity: 0;
+    }
+
+    .perfect-overlay.show .confetti {
+      animation: confettiBurst 1.1s ease-out forwards;
+    }
+
+    .c1 { background: #f06f9d; transform: translate(-20px, -20px); }
+    .c2 { background: #5a9dfc; transform: translate(20px, -20px); }
+    .c3 { background: #ffe394; transform: translate(-25px, 20px); }
+    .c4 { background: #bce7db; transform: translate(25px, 20px); }
+    .c5 { background: #c6b0f4; transform: translate(0, -30px); }
+    .c6 { background: #f7b7c9; transform: translate(0, 30px); }
+
+    @keyframes pop {
+      0% { transform: scale(0.75); opacity: 0; }
+      60% { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes fadeOut {
+      0% { opacity: 0; }
+      15% { opacity: 1; }
+      75% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    @keyframes confettiBurst {
+      0% {
+        opacity: 1;
+        left: 50%;
+        top: 50%;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    .perfect-overlay.show .c1 { left: 34%; top: 34%; transform: rotate(30deg); }
+    .perfect-overlay.show .c2 { left: 66%; top: 34%; transform: rotate(-25deg); }
+    .perfect-overlay.show .c3 { left: 32%; top: 62%; transform: rotate(-15deg); }
+    .perfect-overlay.show .c4 { left: 68%; top: 62%; transform: rotate(20deg); }
+    .perfect-overlay.show .c5 { left: 48%; top: 27%; transform: rotate(45deg); }
+    .perfect-overlay.show .c6 { left: 52%; top: 70%; transform: rotate(-40deg); }
+
     @media (max-height: 740px) {
       .container { padding-top: 24px; }
 
@@ -198,9 +286,23 @@
 </head>
 
 <body>
+  <div class="perfect-overlay" id="perfectOverlay">
+    <div class="confetti c1"></div>
+    <div class="confetti c2"></div>
+    <div class="confetti c3"></div>
+    <div class="confetti c4"></div>
+    <div class="confetti c5"></div>
+    <div class="confetti c6"></div>
+
+    <div class="perfect-box">
+      <div class="perfect-title">Congratulations!</div>
+      <div class="perfect-sub">PERFECT +10</div>
+    </div>
+  </div>
+
   <div class="container">
     <h1 class="title">パーセントバルーン</h1>
-    <div class="subtitle">みんなで予想して生き残れ！</div>
+    <div class="subtitle">みんなで予想して生き残ろう！</div>
 
     <div class="top-status">
       <div class="top-item hp-item">
@@ -235,13 +337,29 @@
     const hp = document.getElementById("hp");
     const damage = document.getElementById("damage");
     const playerNameDisplay = document.getElementById("playerNameDisplay");
+    const perfectOverlay = document.getElementById("perfectOverlay");
 
     const name = localStorage.getItem("playerName");
+    let isAcceptingAnswers = false;
+    let lastAnsweredState = false;
+
+    const perfectKey = "lastPerfectCount_" + name;
+    let lastPerfectCount = Number(localStorage.getItem(perfectKey) || 0);
 
     if (!name) {
-      location.href = "register.html";
+      location.href = "/register.html";
     } else {
       playerNameDisplay.textContent = name + " さん";
+    }
+
+    function showPerfect() {
+      perfectOverlay.classList.remove("show");
+      void perfectOverlay.offsetWidth;
+      perfectOverlay.classList.add("show");
+
+      setTimeout(() => {
+        perfectOverlay.classList.remove("show");
+      }, 1600);
     }
 
     submitButton.addEventListener("click", async () => {
@@ -281,24 +399,46 @@
 
       if (!data.success) return;
 
-      hp.textContent = data.player.hp;
-      damage.textContent = data.player.damage === 0 ? "--" : "-" + data.player.damage;
+      const player = data.player;
 
-      // この問題に回答済みなら、回答欄と送信ボタンをロック
-      if (data.player.answered) {
+      hp.textContent = player.hp;
+
+      if (player.damage === null || player.damage === undefined) {
+        damage.textContent = "--";
+      } else if (player.perfect) {
+        damage.textContent = "+10";
+      } else if (player.damage === 0) {
+        damage.textContent = "--";
+      } else {
+        damage.textContent = "-" + player.damage;
+      }
+
+      if (player.perfect && (player.perfectCount || 0) > lastPerfectCount) {
+        lastPerfectCount = player.perfectCount || 0;
+        localStorage.setItem(perfectKey, lastPerfectCount);
+        showPerfect();
+      }
+
+      if (player.answered) {
         answerInput.disabled = true;
         submitButton.disabled = true;
 
-        if (data.player.answer !== 0) {
-          answerInput.value = data.player.answer;
-          message.textContent = "回答済み（あなたの回答：" + data.player.answer + "）";
+        if (player.answer !== null && player.answer !== undefined) {
+          answerInput.value = player.answer;
+          message.textContent = "回答済み（あなたの回答：" + player.answer + "）";
         }
+
+        lastAnsweredState = true;
       } else {
-        // 次の問題に進んだら、また入力できるようにする
-        answerInput.disabled = false;
-        submitButton.disabled = false;
-        answerInput.value = "";
-        message.textContent = "";
+        if (lastAnsweredState) {
+          answerInput.value = "";
+          message.textContent = "";
+        }
+
+        answerInput.disabled = !isAcceptingAnswers;
+        submitButton.disabled = !isAcceptingAnswers;
+
+        lastAnsweredState = false;
       }
     }
 
@@ -306,22 +446,20 @@
       const res = await fetch("/answer-status");
       const data = await res.json();
 
-      status.textContent = data.isAcceptingAnswers ? "回答受付中" : "締切中";
+      isAcceptingAnswers = data.isAcceptingAnswers;
+      status.textContent = isAcceptingAnswers ? "回答受付中" : "締切中";
 
-      // 締切中なら送信不可
-      if (!data.isAcceptingAnswers) {
+      if (!isAcceptingAnswers) {
         submitButton.disabled = true;
-      } else {
-        loadMyData();
       }
+
+      loadMyData();
     }
 
     loadStatus();
-    loadMyData();
 
     setInterval(() => {
       loadStatus();
-      loadMyData();
     }, 3000);
   </script>
 </body>
