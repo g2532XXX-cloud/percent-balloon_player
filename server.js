@@ -94,12 +94,38 @@ app.post("/submit-answer", (req, res) => {
 app.post("/calculate", (req, res) => {
   const correct = Number(req.body.correct);
 
-  if (!Number.isFinite(correct) || correct < 0 || correct > 100) {
-    return res.json({
-      success: false,
-      message: "正解は0〜100で入力してください"
-    });
-  }
+  players.forEach(player => {
+    if (player.answer !== null) {
+      const diff = Math.abs(player.answer - correct);
+
+      player.damage = diff;
+
+      // PERFECTなら回復
+      if (diff === 0) {
+        player.hp += 10;
+
+        // 最大HPは200
+        if (player.hp > 200) {
+          player.hp = 200;
+        }
+      } else {
+        // 通常ダメージ
+        player.hp -= diff;
+
+        // 0未満防止
+        if (player.hp < 0) {
+          player.hp = 0;
+        }
+      }
+    }
+  });
+
+  savePlayers();
+
+  res.json({
+    success: true
+  });
+});
 
   Object.keys(players).forEach(name => {
     const player = players[name];
