@@ -106,7 +106,7 @@ app.post("/calculate", (req, res) => {
       player.perfectCount = (player.perfectCount || 0) + 1;
       player.hp += 10;
 
-      if (player.hp > 200) player.hp = 200;
+      if (player.hp > 220) player.hp = 220;
     } else {
       player.perfect = false;
       player.hp -= diff;
