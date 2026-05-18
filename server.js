@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const DATA_FILE = "players.json";
 
 app.use(express.json());
@@ -40,14 +40,15 @@ app.post("/register", (req, res) => {
   }
 
   players[name] = {
-    hp: 300,
-    answer: 0,
-    damage: 0,
-    answered: false
+    hp: 200,
+    answer: null,
+    damage: null,
+    answered: false,
+    perfect: false,
+    perfectCount: 0
   };
 
   saveData();
-
   res.json({ success: true });
 });
 
@@ -56,85 +57,62 @@ app.post("/submit-answer", (req, res) => {
   const answer = Number(req.body.answer);
 
   if (!name || !players[name]) {
-    return res.json({
-      success: false,
-      message: "参加登録をしてください"
-    });
+    return res.json({ success: false, message: "参加登録をしてください" });
   }
 
   if (!isAcceptingAnswers) {
-    return res.json({
-      success: false,
-      message: "現在は回答を締め切っています"
-    });
+    return res.json({ success: false, message: "現在は回答を締め切っています" });
   }
 
   if (!Number.isFinite(answer) || answer < 0 || answer > 100) {
-    return res.json({
-      success: false,
-      message: "0〜100で入力してください"
-    });
+    return res.json({ success: false, message: "0〜100で入力してください" });
   }
 
   if (players[name].answered) {
-    return res.json({
-      success: false,
-      message: "この問題にはすでに回答済みです"
-    });
+    return res.json({ success: false, message: "この問題にはすでに回答済みです" });
   }
 
   players[name].answer = answer;
   players[name].answered = true;
+  players[name].perfect = false;
 
   saveData();
-
   res.json({ success: true, message: "送信OK" });
 });
 
 app.post("/calculate", (req, res) => {
   const correct = Number(req.body.correct);
 
-  players.forEach(player => {
-    if (player.answer !== null) {
-      const diff = Math.abs(player.answer - correct);
-
-      player.damage = diff;
-
-      // PERFECTなら回復
-      if (diff === 0) {
-        player.hp += 10;
-
-        // 最大HPは200
-        if (player.hp > 200) {
-          player.hp = 200;
-        }
-      } else {
-        // 通常ダメージ
-        player.hp -= diff;
-
-        // 0未満防止
-        if (player.hp < 0) {
-          player.hp = 0;
-        }
-      }
-    }
-  });
-
-  savePlayers();
-
-  res.json({
-    success: true
-  });
-});
+  if (!Number.isFinite(correct) || correct < 0 || correct > 100) {
+    return res.json({
+      success: false,
+      message: "正解は0〜100で入力してください"
+    });
+  }
 
   Object.keys(players).forEach(name => {
     const player = players[name];
+
+    if (!player.answered || player.answer === null) {
+      return;
+    }
+
     const diff = Math.abs(player.answer - correct);
 
     player.damage = diff;
-    player.hp -= diff;
 
-    if (player.hp < 0) player.hp = 0;
+    if (diff === 0) {
+      player.perfect = true;
+      player.perfectCount = (player.perfectCount || 0) + 1;
+      player.hp += 10;
+
+      if (player.hp > 200) player.hp = 200;
+    } else {
+      player.perfect = false;
+      player.hp -= diff;
+
+      if (player.hp < 0) player.hp = 0;
+    }
   });
 
   saveData();
@@ -143,8 +121,9 @@ app.post("/calculate", (req, res) => {
 
 app.post("/next-round", (req, res) => {
   Object.keys(players).forEach(name => {
-    players[name].answer = 0;
+    players[name].answer = null;
     players[name].answered = false;
+    players[name].perfect = false;
   });
 
   isAcceptingAnswers = true;
