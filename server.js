@@ -21,7 +21,7 @@ function saveData() {
 }
 
 function cleanName(name) {
-  return String(name || "").trim().slice(0, 12);
+  return String(name || "").trim().slice(0, 22);
 }
 
 app.post("/register", (req, res) => {
