@@ -90,6 +90,63 @@ app.post("/calculate", (req, res) => {
     });
   }
 
+  const diffs = [];
+
+  // まず回答済みの人の誤差を集める
+  Object.keys(players).forEach(name => {
+    const player = players[name];
+
+    if (player.answered && player.answer !== null) {
+      const diff = Math.abs(player.answer - correct);
+      diffs.push(diff);
+    }
+  });
+
+  // 平均ダメージ
+  let averageDamage = 0;
+
+  if (diffs.length > 0) {
+    const total = diffs.reduce((sum, diff) => sum + diff, 0);
+    averageDamage = Math.round(total / diffs.length);
+  }
+
+  // 全員に反映
+  Object.keys(players).forEach(name => {
+    const player = players[name];
+
+    if (player.answered && player.answer !== null) {
+      const diff = Math.abs(player.answer - correct);
+
+      player.damage = diff;
+
+      if (diff === 0) {
+        player.perfect = true;
+        player.perfectCount = (player.perfectCount || 0) + 1;
+
+        player.hp += 10;
+
+        // 最大HP
+        if (player.hp > 300) player.hp = 300;
+      } else {
+        player.perfect = false;
+        player.hp -= diff;
+
+        if (player.hp < 0) player.hp = 0;
+      }
+    } else {
+      // 未回答ペナルティ：平均ダメージ
+      player.damage = averageDamage;
+      player.perfect = false;
+      player.hp -= averageDamage;
+
+      if (player.hp < 0) player.hp = 0;
+    }
+  });
+
+  saveData();
+  res.json(players);
+});
+
   Object.keys(players).forEach(name => {
     const player = players[name];
 
