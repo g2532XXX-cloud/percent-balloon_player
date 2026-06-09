@@ -128,13 +128,15 @@ app.post("/calculate", (req, res) => {
 
         if (player.hp < 0) player.hp = 0;
       }
-    } else {
-      player.damage = averageDamage;
-      player.perfect = false;
-      player.hp -= averageDamage;
+      } else {
+        const penalty = averageDamage + 10;
 
-      if (player.hp < 0) player.hp = 0;
-    }
+        player.damage = penalty;
+        player.perfect = false;
+        player.hp -= penalty;
+
+        if (player.hp < 0) player.hp = 0;
+      }
   });
 
   saveData();
